@@ -192,11 +192,10 @@ export function AddDealForm({ onSuccess, onCancel }: AddDealFormProps) {
       
       const newDeal = await createDeal(processedData)
       
+      // createDeal now throws errors instead of returning null
       if (newDeal) {
         console.log('✅ Deal created successfully:', newDeal)
         onSuccess(newDeal)
-      } else {
-        throw new Error('Failed to create deal - createDeal returned null')
       }
     } catch (error: unknown) {
       console.error('❌ Error creating deal:', error)
