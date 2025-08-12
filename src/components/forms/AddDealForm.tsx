@@ -12,6 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { createDeal } from '@/lib/supabase'
 import type { Deal } from '@/lib/types'
+import { useAuth } from '@/contexts/AuthContext'
 import {
   STATUS_DEAL_OPTIONS,
   PUBLICO_ALVO_OPTIONS,
@@ -32,7 +33,7 @@ const addDealSchema = z.object({
   ticker_fundo: z.string().optional(),
   cnpj_fundo: z.string().optional(),
   gestora: z.string().optional(),
-  publico_alvo: z.string().optional(),
+  publico_alvo: z.string().min(1, 'Público Alvo é obrigatório').optional(),
 
   // Important dates
   data_janela: z.string().optional(),
@@ -42,16 +43,16 @@ const addDealSchema = z.object({
   data_bookbuilding: z.string().optional(),
   data_liquidacao: z.string().optional(),
 
-  // Financial data
-  oferta_base: z.number().optional(),
-  oferta_minima: z.number().optional(),
-  volume_liquidado: z.number().optional(),
-  demanda_estimada_total: z.number().optional(),
-  demanda_pedra: z.number().optional(),
-  demanda_inst: z.number().optional(),
-  demanda_varejo: z.number().optional(),
+  // Financial data - improved validation
+  oferta_base: z.number().min(0, 'Oferta Base deve ser positiva').optional(),
+  oferta_minima: z.number().min(0, 'Oferta Mínima deve ser positiva').optional(),
+  volume_liquidado: z.number().min(0, 'Volume Liquidado deve ser positivo').optional(),
+  demanda_estimada_total: z.number().min(0, 'Demanda Total deve ser positiva').optional(),
+  demanda_pedra: z.number().min(0, 'Demanda Pedra deve ser positiva').optional(),
+  demanda_inst: z.number().min(0, 'Demanda Institucional deve ser positiva').optional(),
+  demanda_varejo: z.number().min(0, 'Demanda Varejo deve ser positiva').optional(),
   ancoragem_gf_alt: z.string().optional(),
-  vol_ancoragem: z.number().optional(),
+  vol_ancoragem: z.number().min(0, 'Volume Ancoragem deve ser positivo').optional(),
 
   // Deal characteristics
   veiculo: z.string().optional(),
@@ -62,20 +63,20 @@ const addDealSchema = z.object({
   tipo: z.string().optional(),
   tipo_cota: z.string().optional(),
 
-  // Fees
-  fee_est: z.number().optional(),
-  fee_canal: z.number().optional(),
-  rep_gestao: z.number().optional(),
-  rep_performance: z.number().optional(),
-  perc_book: z.number().optional(),
+  // Fees - improved validation
+  fee_est: z.number().min(0, 'Fee Estruturação deve ser positiva').max(100, 'Fee não pode exceder 100%').optional(),
+  fee_canal: z.number().min(0, 'Fee Canal deve ser positiva').max(100, 'Fee não pode exceder 100%').optional(),
+  rep_gestao: z.number().min(0, 'Rep. Gestão deve ser positiva').max(100, 'Repasse não pode exceder 100%').optional(),
+  rep_performance: z.number().min(0, 'Rep. Performance deve ser positiva').max(100, 'Repasse não pode exceder 100%').optional(),
+  perc_book: z.number().min(0, '% Book deve ser positivo').max(100, '% Book não pode exceder 100%').optional(),
 
   // Distribution
   canais: z.string().optional(),
 
-  // Internal fields
-  aprov_leitura: z.string().optional(),
-  aprov_analise: z.string().optional(),
-  resp_dcm: z.string().optional(),
+  // Internal fields - some are required for processing
+  aprov_leitura: z.string().min(1, 'Aprovação Leitura é obrigatória').optional(),
+  aprov_analise: z.string().min(1, 'Aprovação Análise é obrigatória').optional(),
+  resp_dcm: z.string().min(1, 'Responsável DCM é obrigatório').optional(),
   bup_dcm: z.string().optional(),
   resp_dist: z.string().optional(),
   bup_dist: z.string().optional(),
@@ -95,12 +96,13 @@ interface AddDealFormProps {
 
 
 export function AddDealForm({ onSuccess, onCancel }: AddDealFormProps) {
+  const { user, session } = useAuth()
   
   const {
     register,
     handleSubmit,
     setValue,
-    formState: { isSubmitting }
+    formState: { isSubmitting, errors }
   } = useForm<AddDealFormData>({
     resolver: zodResolver(addDealSchema),
     defaultValues: {
@@ -110,6 +112,14 @@ export function AddDealForm({ onSuccess, onCancel }: AddDealFormProps) {
 
   const onSubmit = async (data: AddDealFormData) => {
     try {
+      // Check authentication before proceeding
+      if (!user || !session) {
+        alert('❌ Erro de autenticação\n\nVocê precisa estar logado para criar deals.\nPor favor, faça login novamente.')
+        return
+      }
+      
+      console.log('🚀 Starting deal creation with form data:', data)
+      console.log('👤 User authenticated:', { userId: user.id, email: user.email })
       
       // Convert numeric string inputs to numbers and handle empty strings
       // Only include fields that exist in the Deal interface
@@ -122,7 +132,7 @@ export function AddDealForm({ onSuccess, onCancel }: AddDealFormProps) {
         ticker_fundo: data.ticker_fundo || null,
         cnpj_fundo: data.cnpj_fundo || null,
         gestora: data.gestora || null,
-        publico_alvo: data.publico_alvo || 'Geral',
+        publico_alvo: data.publico_alvo || 'PG', // Changed from 'Geral' to valid enum value
         
         // Important dates (convert to ISO string if provided)
         data_janela: data.data_janela || null,
@@ -132,16 +142,16 @@ export function AddDealForm({ onSuccess, onCancel }: AddDealFormProps) {
         data_bookbuilding: data.data_bookbuilding || null,
         data_liquidacao: data.data_liquidacao || null,
         
-        // Financial data (convert to numbers)
-        oferta_base: data.oferta_base ? Number(data.oferta_base) : null,
-        oferta_minima: data.oferta_minima ? Number(data.oferta_minima) : null,
-        volume_liquidado: data.volume_liquidado ? Number(data.volume_liquidado) : null,
-        demanda_estimada_total: data.demanda_estimada_total ? Number(data.demanda_estimada_total) : null,
-        demanda_pedra: data.demanda_pedra ? Number(data.demanda_pedra) : null,
-        demanda_inst: data.demanda_inst ? Number(data.demanda_inst) : null,
-        demanda_varejo: data.demanda_varejo ? Number(data.demanda_varejo) : null,
+        // Financial data (convert to numbers with validation)
+        oferta_base: data.oferta_base ? (isNaN(Number(data.oferta_base)) ? null : Number(data.oferta_base)) : null,
+        oferta_minima: data.oferta_minima ? (isNaN(Number(data.oferta_minima)) ? null : Number(data.oferta_minima)) : null,
+        volume_liquidado: data.volume_liquidado ? (isNaN(Number(data.volume_liquidado)) ? null : Number(data.volume_liquidado)) : null,
+        demanda_estimada_total: data.demanda_estimada_total ? (isNaN(Number(data.demanda_estimada_total)) ? null : Number(data.demanda_estimada_total)) : null,
+        demanda_pedra: data.demanda_pedra ? (isNaN(Number(data.demanda_pedra)) ? null : Number(data.demanda_pedra)) : null,
+        demanda_inst: data.demanda_inst ? (isNaN(Number(data.demanda_inst)) ? null : Number(data.demanda_inst)) : null,
+        demanda_varejo: data.demanda_varejo ? (isNaN(Number(data.demanda_varejo)) ? null : Number(data.demanda_varejo)) : null,
         ancoragem_gf_alt: data.ancoragem_gf_alt || null,
-        vol_ancoragem: data.vol_ancoragem ? Number(data.vol_ancoragem) : null,
+        vol_ancoragem: data.vol_ancoragem ? (isNaN(Number(data.vol_ancoragem)) ? null : Number(data.vol_ancoragem)) : null,
         
         // Deal characteristics
         veiculo: data.veiculo || null,
@@ -152,10 +162,10 @@ export function AddDealForm({ onSuccess, onCancel }: AddDealFormProps) {
         tipo: data.tipo || null,
         
         // Fees
-        fee_est: data.fee_est ? Number(data.fee_est) : null,
-        fee_canal: data.fee_canal ? Number(data.fee_canal) : null,
-        rep_gestao: data.rep_gestao ? Number(data.rep_gestao) : null,
-        rep_performance: data.rep_performance ? Number(data.rep_performance) : null,
+        fee_est: data.fee_est ? (isNaN(Number(data.fee_est)) ? null : Number(data.fee_est)) : null,
+        fee_canal: data.fee_canal ? (isNaN(Number(data.fee_canal)) ? null : Number(data.fee_canal)) : null,
+        rep_gestao: data.rep_gestao ? (isNaN(Number(data.rep_gestao)) ? null : Number(data.rep_gestao)) : null,
+        rep_performance: data.rep_performance ? (isNaN(Number(data.rep_performance)) ? null : Number(data.rep_performance)) : null,
         
         // Revenue fields (will be calculated by triggers/backend)
         receita_estimada: null,
@@ -172,22 +182,45 @@ export function AddDealForm({ onSuccess, onCancel }: AddDealFormProps) {
         resp_dist: data.resp_dist || null,
         bup_dist: data.bup_dist || null,
         tipo_cota: data.tipo_cota || null,
-        perc_book: data.perc_book ? Number(data.perc_book) : null,
+        perc_book: data.perc_book ? (isNaN(Number(data.perc_book)) ? null : Number(data.perc_book)) : null,
         
         // Backlog ordering (null for new deals)
         backlog_order: null
       }
       
+      console.log('📋 Processed data for database:', JSON.stringify(processedData, null, 2))
+      
       const newDeal = await createDeal(processedData)
       
+      // createDeal now throws errors instead of returning null
       if (newDeal) {
+        console.log('✅ Deal created successfully:', newDeal)
         onSuccess(newDeal)
-      } else {
-        throw new Error('Failed to create deal')
       }
-    } catch (error) {
-      console.error('Error creating deal:', error)
-      alert('Erro ao criar deal. Verifique os dados e tente novamente.')
+    } catch (error: unknown) {
+      console.error('❌ Error creating deal:', error)
+      
+      // Enhanced error handling with specific error messages
+      let errorMessage = 'Erro desconhecido ao criar deal.'
+      
+      if (error instanceof Error && error.message) {
+        if (error.message.includes('violates')) {
+          errorMessage = 'Dados inválidos: alguns campos não atendem às restrições do banco de dados.'
+        } else if (error.message.includes('permission') || error.message.includes('RLS')) {
+          errorMessage = 'Erro de permissão: você não tem acesso para criar deals. Verifique se está logado.'
+        } else if (error.message.includes('column') && error.message.includes('does not exist')) {
+          errorMessage = 'Erro interno: campo não encontrado no banco de dados.'
+        } else if (error.message.includes('duplicate key')) {
+          errorMessage = 'Deal duplicado: já existe um deal com essas informações.'
+        } else if (error.message.includes('connection')) {
+          errorMessage = 'Erro de conexão: não foi possível conectar ao banco de dados.'
+        } else {
+          errorMessage = `Erro: ${error.message}`
+        }
+      }
+      
+      // Show detailed error to user
+      alert(`❌ ${errorMessage}\n\nPor favor:\n- Verifique se todos os campos obrigatórios estão preenchidos\n- Confirme se você está logado no sistema\n- Tente novamente em alguns segundos\n\nSe o problema persistir, entre em contato com o suporte.`)
     }
   }
 
@@ -207,7 +240,11 @@ export function AddDealForm({ onSuccess, onCancel }: AddDealFormProps) {
                 id="nome_fundo"
                 {...register('nome_fundo')}
                 placeholder="Nome do fundo"
+                className={errors.nome_fundo ? 'border-red-500' : ''}
               />
+              {errors.nome_fundo && (
+                <p className="text-sm text-red-500 mt-1">{errors.nome_fundo.message}</p>
+              )}
             </div>
             
             <div>
