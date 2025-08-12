@@ -110,46 +110,58 @@ export async function updateDeal(deal_uuid: string, updates: Partial<Deal>): Pro
   }
 }
 
-// Create a new deal in the database
+// Create a new deal in the database using server-side API
 export async function createDeal(dealData: Omit<Deal, 'deal_uuid' | 'criado_em'>): Promise<Deal | null> {
   try {
-    console.log('📝 Attempting to create deal with payload:', JSON.stringify(dealData, null, 2))
+    console.log('📝 Attempting to create deal via API with payload:', JSON.stringify(dealData, null, 2))
     
-    const { data, error } = await supabase
-      .from('deals')
-      .insert([dealData])
-      .select()
-      .single()
+    // Call our server-side API instead of direct Supabase
+    const response = await fetch('/api/deals', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(dealData),
+      credentials: 'same-origin' // Important for cookies/auth
+    })
 
-    if (error) {
-      console.error('❌ Supabase error creating deal:', error)
-      console.error('Raw error object:', JSON.stringify(error, null, 2))
+    const result = await response.json()
+
+    if (!response.ok) {
+      console.error('❌ API error creating deal:', result)
       console.error('Error details:', {
-        message: error.message || 'No message',
-        details: error.details || 'No details',
-        hint: error.hint || 'No hint',
-        code: error.code || 'No code',
-        statusCode: (error as { statusCode?: number }).statusCode || 'No status code'
+        status: response.status,
+        error: result.error,
+        message: result.message || 'No message',
+        details: result.details || 'No details',
+        hint: result.hint || 'No hint',
+        code: result.code || 'No code'
       })
       
       // Log specific field issues if available
-      if (error.message && error.message.includes('violates')) {
+      if (result.message && result.message.includes('violates')) {
         console.error('🔍 Possible constraint violation - check required fields')
       }
-      if (error.message && error.message.includes('permission')) {
+      if (result.message && result.message.includes('permission')) {
         console.error('🔒 Possible permission issue - check RLS policies')
       }
+      if (result.error === 'Unauthorized') {
+        console.error('🔐 Authentication required - user may need to log in again')
+      }
       
-      return null
+      // Throw error with detailed message for the form to catch
+      throw new Error(result.message || result.error || 'Failed to create deal')
     }
 
-    console.log('✅ Deal created successfully:', data)
-    return data as Deal
+    console.log('✅ Deal created successfully via API:', result.data)
+    return result.data as Deal
   } catch (error) {
     console.error('💥 Unexpected error in createDeal:', error)
     console.error('Error type:', typeof error)
     console.error('Error stack:', (error as Error).stack)
-    return null
+    
+    // Re-throw the error so the form can handle it properly
+    throw error
   }
 }
 
