@@ -12,7 +12,6 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { updateDeal } from '@/lib/supabase'
 import { logObjectChanges } from '@/lib/audit'
 import { formatNumberForDisplay, parseFormattedNumber } from '@/lib/formatting'
-import { cn } from '@/lib/utils'
 import type { Deal } from '@/lib/types'
 import {
   STATUS_DEAL_OPTIONS,
@@ -95,8 +94,8 @@ export function EditDealModalV2({ deal, open, onOpenChange, onSuccess }: EditDea
       await logObjectChanges(
         deal.deal_uuid,
         deal.nome_fundo || 'Unknown Deal',
-        deal as Record<string, unknown>,
-        formData as Record<string, unknown>
+        deal as unknown as Record<string, unknown>,
+        formData as unknown as Record<string, unknown>
       )
       
       // Update deal

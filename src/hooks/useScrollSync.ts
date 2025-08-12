@@ -8,14 +8,14 @@ interface ScrollSyncOptions {
 export function useScrollSync(
   options: ScrollSyncOptions = {}
 ) {
-  const { enabled = true, throttleMs = 16 } = options
+  const { enabled = true } = options
   
   const headersContainerRef = useRef<HTMLDivElement>(null)
   const rowsContainerRef = useRef<HTMLDivElement>(null)
   const contentContainerRef = useRef<HTMLDivElement>(null)
   
   const isScrollingRef = useRef(false)
-  const scrollTimeoutRef = useRef<NodeJS.Timeout>()
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   
   const throttleScroll = useCallback((fn: () => void) => {
     if (!isScrollingRef.current) {

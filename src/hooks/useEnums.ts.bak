@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { getCachedAllDealEnumsWithFallback, getEnumValuesWithFallback } from '@/lib/database-enums'
 
 interface UseEnumsReturn {
@@ -68,7 +68,7 @@ export function useFieldEnum(tableName: string, fieldName: string): UseFieldEnum
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchFieldEnum = async () => {
+  const fetchFieldEnum = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -83,11 +83,11 @@ export function useFieldEnum(tableName: string, fieldName: string): UseFieldEnum
     } finally {
       setLoading(false)
     }
-  }
+  }, [tableName, fieldName])
 
   useEffect(() => {
     fetchFieldEnum()
-  }, [tableName, fieldName])
+  }, [fetchFieldEnum])
 
   const refetch = async () => {
     await fetchFieldEnum()

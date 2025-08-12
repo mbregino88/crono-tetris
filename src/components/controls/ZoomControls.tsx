@@ -1,6 +1,6 @@
 import React from 'react'
 import { Button } from '@/components/ui/button'
-import { ZoomIn, ZoomOut, Maximize } from 'lucide-react'
+import { ZoomIn, ZoomOut } from 'lucide-react'
 
 interface ZoomControlsProps {
   zoomLevel: number

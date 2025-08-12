@@ -80,14 +80,13 @@ export async function middleware(request: NextRequest) {
 
   // Get the current user (more secure than getSession)
   const {
-    data: { user },
-    error: userError
+    data: { user }
   } = await supabase.auth.getUser()
 
   const { pathname } = request.nextUrl
 
   // Simple user check
-  const isAuthenticated = !!user
+  // const isAuthenticated = !!user
   
 
   // Handle auth callback routes - always allow

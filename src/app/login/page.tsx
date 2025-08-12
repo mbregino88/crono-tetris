@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,7 +9,6 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Loader2, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react'
 
 export default function LoginPage() {
-  const router = useRouter()
   const supabase = createSupabaseBrowserClient()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -41,17 +39,11 @@ export default function LoginPage() {
     try {
       
       // Direct Supabase authentication
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
-      console.log({
-        success: !error,
-        user: data.user?.email, 
-        session: !!data.session, 
-        error: error?.message 
-      })
 
       if (error) {
         if (error.message.includes('Email not confirmed')) {

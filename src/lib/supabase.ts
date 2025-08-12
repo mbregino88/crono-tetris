@@ -81,7 +81,7 @@ export async function updateDeal(deal_uuid: string, updates: Partial<Deal>): Pro
         details: error.details || 'No details', 
         hint: error.hint || 'No hint',
         code: error.code || 'No code',
-        statusCode: (error as any).statusCode || 'No status code'
+        statusCode: (error as { statusCode?: number }).statusCode || 'No status code'
       })
       
       // Log specific field issues if available
@@ -129,7 +129,7 @@ export async function createDeal(dealData: Omit<Deal, 'deal_uuid' | 'criado_em'>
         details: error.details || 'No details',
         hint: error.hint || 'No hint',
         code: error.code || 'No code',
-        statusCode: (error as any).statusCode || 'No status code'
+        statusCode: (error as { statusCode?: number }).statusCode || 'No status code'
       })
       
       // Log specific field issues if available
@@ -182,7 +182,7 @@ export async function getEnumValues(tableName: string, columnName: string): Prom
     // Extract unique values and filter out nulls/empty strings
     const uniqueValues = [...new Set(
       distinctData
-        ?.map(row => (row as any)[columnName])
+        ?.map(row => (row as unknown as Record<string, unknown>)[columnName])
         ?.filter(value => value && value.toString().trim() !== '')
     )] as string[]
     
@@ -212,8 +212,6 @@ export async function getAllDealEnums(): Promise<Record<string, string[]>> {
     ]
     
     const enumMap: Record<string, string[]> = {}
-    let successCount = 0
-    let errorCount = 0
     
     // Process fields sequentially to better track which ones fail
     for (const field of enumFields) {
@@ -222,15 +220,12 @@ export async function getAllDealEnums(): Promise<Record<string, string[]>> {
         
         if (values && values.length > 0) {
           enumMap[field] = values
-          successCount++
         } else {
           enumMap[field] = [] // Empty array, will trigger fallback
-          errorCount++
         }
       } catch (error) {
         console.error(`❌ Failed to load enum values for ${field}:`, error)
         enumMap[field] = [] // Empty array, will trigger fallback
-        errorCount++
       }
     }
     

@@ -9,7 +9,7 @@ interface DroppableColumnProps {
   className?: string
 }
 
-export function DroppableColumn({ id, monthKey, children, className }: DroppableColumnProps) {
+export function DroppableColumn({ monthKey, children, className }: DroppableColumnProps) {
   const { isOver, setNodeRef } = useDroppable({ 
     id: `column-${monthKey}`,
     data: {

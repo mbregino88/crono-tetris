@@ -53,7 +53,7 @@ export function validateServerEnv() {
     return { success: true, data: env, error: null }
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errors = error.errors.map(
+      const errors = error.issues.map(
         (err) => `${err.path.join('.')}: ${err.message}`
       )
       return {
@@ -82,7 +82,7 @@ export function validateClientEnv() {
     return { success: true, data: env, error: null }
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errors = error.errors.map(
+      const errors = error.issues.map(
         (err) => `${err.path.join('.')}: ${err.message}`
       )
       return {

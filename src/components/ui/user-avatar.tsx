@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { LogOut, ChevronDown, Loader2, Moon, Sun } from 'lucide-react'
+import { LogOut, Loader2, Moon, Sun } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/contexts/ThemeContext'
 import { getUserInitials, getUserDisplayName } from '@/lib/auth'
@@ -18,7 +18,6 @@ interface UserAvatarProps {
 export function UserAvatar({
   userName,
   userEmail,
-  onSettingsClick,
   onLogoutClick,
   className
 }: UserAvatarProps) {

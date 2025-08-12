@@ -1,7 +1,7 @@
 import React from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { X, Filter } from 'lucide-react'
+import { Filter } from 'lucide-react'
 import { MultiSelectDropdown } from '@/components/ui/multiselect-dropdown'
 import type { Deal } from '@/lib/types'
 

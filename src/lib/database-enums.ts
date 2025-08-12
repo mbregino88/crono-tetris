@@ -132,6 +132,7 @@ export const FIELD_LABELS = {
   receita_estimada: 'Receita Estimada (R$)',
   canais: 'Canais',
   arpov_leitura: 'Aprov. Leitura?',
+  aprov_leitura: 'Aprov. Leitura?',
   aprov_analise: 'Aprov. Análise?',
   resp_dcm: 'Responsável DCM',
   bup_dcm: 'Backup DCM',

@@ -26,7 +26,11 @@
       "Bash(git init:*)",
       "Bash(git config:*)",
       "Bash(git add:*)",
-      "Bash(del nul)"
+      "Bash(del nul)",
+      "Bash(gh repo create:*)",
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": []
   }

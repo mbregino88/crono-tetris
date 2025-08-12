@@ -2,7 +2,7 @@ import React from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { cn, formatCurrency } from '@/lib/utils'
-import { getVehicleColor, getIndexerColor, getSectorColor, getProductColor, getTipoColor } from '@/lib/colors'
+import { getVehicleColor, getIndexerColor, getSectorColor, getProductColor } from '@/lib/colors'
 import { getHighlightedTextParts } from '@/lib/search'
 import type { Deal } from '@/lib/types'
 

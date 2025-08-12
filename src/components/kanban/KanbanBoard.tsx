@@ -11,17 +11,14 @@ import {
   useSensor,
   useSensors,
   pointerWithin,
-  useDroppable,
-  DragOverEvent,
 } from '@dnd-kit/core'
 import {
   SortableContext,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
-import { format, parse } from 'date-fns'
+import { parse } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { safeParseISO, safeFormatMonthYear, isValidDateString } from '@/lib/date-utils'
-import { cn, formatCurrency } from '@/lib/utils'
 import { fetchDeals, updateDeal, updateBacklogOrder } from '@/lib/supabase'
 import { logObjectChanges } from '@/lib/audit'
 import { searchAndFilterDeals } from '@/lib/search'
@@ -35,34 +32,9 @@ import { ZoomControls } from '@/components/controls/ZoomControls'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 import { SimplifiedKanbanGrid } from './SimplifiedKanbanGrid'
-import { DroppableColumn } from './DroppableColumn'
-import { SortableDealCard } from './DealCard'
 import { DealCard } from './DealCard'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import type { Deal, GroupingField, SummaryStats } from '@/lib/types'
 
-interface DroppableCellProps {
-  id: string
-  children: React.ReactNode
-  className?: string
-}
-
-function DroppableCell({ id, children, className }: DroppableCellProps) {
-  const { isOver, setNodeRef } = useDroppable({ id })
-
-  return (
-    <div
-      ref={setNodeRef}
-      className={cn(
-        'kanban-cell min-h-[120px] p-2 bg-gray-50',
-        isOver && 'bg-blue-50 border-2 border-blue-300 border-dashed',
-        className
-      )}
-    >
-      {children}
-    </div>
-  )
-}
 
 export function KanbanBoard() {
   const [deals, setDeals] = useState<Deal[]>([])
@@ -81,8 +53,8 @@ export function KanbanBoard() {
     tipoCota: []
   })
   const [groupBy, setGroupBy] = useState<GroupingField>('tipo')
-  const [stickyHorizontal, setStickyHorizontal] = useState(false)
-  const [stickyVertical, setStickyVertical] = useState(false)
+  const [stickyHorizontal] = useState(false)
+  const [stickyVertical] = useState(false)
   const [activeId, setActiveId] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
   const [zoomLevel, setZoomLevel] = useState(1)
@@ -384,7 +356,8 @@ export function KanbanBoard() {
   }
 
   // Row totals
-  const rowTotals = useMemo(() => {
+  // Row totals - kept for potential future use
+  useMemo(() => {
     const totals: Record<string, SummaryStats> = {}
     rowKeys.forEach((rowKey) => {
       const allDeals = colKeys.flatMap(colKey => organizedData[rowKey]?.[colKey] || [])
@@ -393,8 +366,8 @@ export function KanbanBoard() {
     return totals
   }, [organizedData, rowKeys, colKeys])
 
-  // Column totals
-  const colTotals = useMemo(() => {
+  // Column totals - kept for potential future use
+  useMemo(() => {
     const totals: Record<string, SummaryStats> = {}
     colKeys.forEach((colKey) => {
       const allDeals = rowKeys.flatMap(rowKey => organizedData[rowKey]?.[colKey] || [])
@@ -550,8 +523,8 @@ export function KanbanBoard() {
           await logObjectChanges(
             activeDeal.deal_uuid,
             activeDeal.nome_fundo || 'Unknown Deal',
-            activeDeal as Record<string, any>,
-            { ...activeDeal, ...updates } as Record<string, any>
+            activeDeal as unknown as Record<string, unknown>,
+            { ...activeDeal, ...updates } as unknown as Record<string, unknown>
           )
           
           await updateDeal(activeDeal.deal_uuid, updates)

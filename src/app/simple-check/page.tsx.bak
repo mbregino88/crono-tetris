@@ -56,7 +56,7 @@ export default function SimpleCheckPage() {
         const commonColumns = ['id', 'nome_oferta', 'emissor', 'deal_uuid', 'nome_fundo']
         for (const col of commonColumns) {
           try {
-            const { data, error } = await supabase
+            const { error } = await supabase
               .from('deals')
               .select(col)
               .limit(1)

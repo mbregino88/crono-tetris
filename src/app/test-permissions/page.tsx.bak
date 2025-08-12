@@ -4,7 +4,13 @@ import { useState, useEffect } from 'react'
 import { checkDatabasePermissions } from '@/lib/supabase'
 
 export default function TestPermissionsPage() {
-  const [permissions, setPermissions] = useState<any>(null)
+  const [permissions, setPermissions] = useState<{
+    canSelect: boolean;
+    canInsert: boolean;
+    canUpdate: boolean;
+    canDelete: boolean;
+    errors?: string[];
+  } | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -82,11 +88,11 @@ export default function TestPermissionsPage() {
             <h3 className="font-bold mb-2">🔧 Next Steps:</h3>
             {!permissions.canInsert ? (
               <div className="text-orange-600">
-                <p>📋 INSERT permission is denied. This is why you can't create new deals.</p>
+                <p>📋 INSERT permission is denied. This is why you can&apos;t create new deals.</p>
                 <p className="mt-2">Possible solutions:</p>
                 <ol className="list-decimal list-inside mt-2 space-y-1">
                   <li>Check Supabase RLS (Row Level Security) policies</li>
-                  <li>Ensure you're authenticated if RLS requires it</li>
+                  <li>Ensure you&apos;re authenticated if RLS requires it</li>
                   <li>Verify the table exists with correct schema</li>
                   <li>Check if anonymous access is enabled in Supabase</li>
                 </ol>

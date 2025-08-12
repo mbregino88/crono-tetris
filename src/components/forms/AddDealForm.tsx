@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -10,7 +10,6 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
-import { Loader2 } from 'lucide-react'
 import { createDeal } from '@/lib/supabase'
 import type { Deal } from '@/lib/types'
 import {
@@ -20,12 +19,10 @@ import {
   PRODUTO_OPTIONS,
   SETOR_OPTIONS,
   PRINCIPAL_INDEXADOR_OPTIONS,
-  IPO_FON_OPTIONS,
   TIPO_COTA_OPTIONS,
   TIPO_OPTIONS,
   APPROVAL_OPTIONS,
   ANCORAGEM_OPTIONS,
-  FIELD_LABELS
 } from '@/lib/database-enums'
 
 // Validation schema based on schema-updated.sql - matches TypeScript interface exactly
@@ -103,8 +100,7 @@ export function AddDealForm({ onSuccess, onCancel }: AddDealFormProps) {
     register,
     handleSubmit,
     setValue,
-    watch,
-    formState: { errors, isSubmitting }
+    formState: { isSubmitting }
   } = useForm<AddDealFormData>({
     resolver: zodResolver(addDealSchema),
     defaultValues: {
@@ -114,7 +110,6 @@ export function AddDealForm({ onSuccess, onCancel }: AddDealFormProps) {
 
   const onSubmit = async (data: AddDealFormData) => {
     try {
-      console.log('📋 Form data received:', data)
       
       // Convert numeric string inputs to numbers and handle empty strings
       // Only include fields that exist in the Deal interface
@@ -183,7 +178,6 @@ export function AddDealForm({ onSuccess, onCancel }: AddDealFormProps) {
         backlog_order: null
       }
       
-      console.log('🔄 Processed data for insert:', processedData)
       const newDeal = await createDeal(processedData)
       
       if (newDeal) {

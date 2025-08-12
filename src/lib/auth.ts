@@ -66,7 +66,7 @@ export async function signInWithPassword(email: string, password: string) {
 // Sign up with email and password
 export async function signUpWithPassword(email: string, password: string, options?: {
   redirectTo?: string
-  data?: Record<string, any>
+  data?: Record<string, unknown>
 }) {
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -111,7 +111,7 @@ export async function resetPassword(email: string, redirectTo?: string) {
 export async function updateUserProfile(updates: {
   full_name?: string
   avatar_url?: string
-  [key: string]: any
+  [key: string]: unknown
 }) {
   const { data, error } = await supabase.auth.updateUser({
     data: updates
@@ -137,7 +137,7 @@ export async function changePassword(newPassword: string) {
 
 // Invite user (admin only)
 export async function inviteUser(email: string, options?: {
-  data?: Record<string, any>
+  data?: Record<string, unknown>
   redirectTo?: string
 }) {
   const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {

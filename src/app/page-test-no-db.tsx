@@ -5,7 +5,7 @@ import { createSupabaseBrowserClient } from '@/lib/supabase-browser'
 
 export default function TestHomePage() {
   const [authStatus, setAuthStatus] = useState('Checking authentication...')
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<{ id: string; email?: string; last_sign_in_at?: string } | null>(null)
 
   useEffect(() => {
     async function checkAuth() {

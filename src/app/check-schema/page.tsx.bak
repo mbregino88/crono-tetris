@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 
 export default function CheckSchemaPage() {
-  const [result, setResult] = useState<any>(null)
+  const [result, setResult] = useState<Record<string, unknown> | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -36,7 +36,7 @@ export default function CheckSchemaPage() {
         // Analyze results
         let columns: string[] = []
         let actualCount = 0
-        const errorDetails: any = {}
+        const errorDetails: Record<string, string> = {}
         
         if (dealsError) {
           errorDetails.selectAllError = dealsError.message

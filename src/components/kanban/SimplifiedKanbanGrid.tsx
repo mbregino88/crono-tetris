@@ -1,15 +1,12 @@
-import React, { useRef, useEffect } from 'react'
+import React, { useRef } from 'react'
 import {
-  DragEndEvent,
-  DragStartEvent,
   useDroppable,
 } from '@dnd-kit/core'
 import { format, parse } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { safeParseISO, safeFormatMonthYear, isValidDateString } from '@/lib/date-utils'
-import { cn, formatCurrency, formatCurrencyApproximate } from '@/lib/utils'
-import { DealCard, SortableDealCard } from './DealCard'
-import { DroppableColumn } from './DroppableColumn'
+import { safeParseISO, safeFormatMonthYear } from '@/lib/date-utils'
+import { cn, formatCurrencyApproximate } from '@/lib/utils'
+import { SortableDealCard } from './DealCard'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import type { Deal, GroupingField, SummaryStats } from '@/lib/types'
 import type { FilterState } from '@/components/filters/FilterControls'
@@ -139,8 +136,8 @@ export function SimplifiedKanbanGrid({
         if (b === 'Sem Data') return 1
         try {
           // For sorting, try to find actual date from deals first, then parse the display format
-          let dateA: Date
-          let dateB: Date
+          let dateA: Date | null = null
+          let dateB: Date | null = null
           
           const dealWithDateA = deals.find(d => 
             d.data_janela && safeFormatMonthYear(d.data_janela) === a
@@ -165,7 +162,7 @@ export function SimplifiedKanbanGrid({
             dateB = parse(b, 'MMM-yyyy', new Date(), { locale: ptBR })
           }
           
-          return dateA.getTime() - dateB.getTime()
+          return (dateA?.getTime() || 0) - (dateB?.getTime() || 0)
         } catch {
           return a.localeCompare(b) // Fallback to string comparison
         }
@@ -241,8 +238,8 @@ export function SimplifiedKanbanGrid({
       return Array.from(monthSet).sort((a, b) => {
         try {
           // For sorting, try to find actual date from deals first, then parse the display format
-          let dateA: Date
-          let dateB: Date
+          let dateA: Date | null = null
+          let dateB: Date | null = null
           
           const dealWithDateA = deals.find(d => 
             d.data_janela && safeFormatMonthYear(d.data_janela) === a
@@ -267,7 +264,7 @@ export function SimplifiedKanbanGrid({
             dateB = parse(b, 'MMM-yyyy', new Date(), { locale: ptBR })
           }
           
-          return dateA.getTime() - dateB.getTime()
+          return (dateA?.getTime() || 0) - (dateB?.getTime() || 0)
         } catch {
           return a.localeCompare(b) // Fallback to string comparison
         }
@@ -324,7 +321,6 @@ export function SimplifiedKanbanGrid({
         
         // Debug log for cells with deals
         if (cellDeals.length > 0) {
-          console.log(`Cell ${rowKey}-${colKey}: ${cellDeals.length} deals, oferta_base: ${ofertaBase}, receita_potencial: ${receitaPotencial}`)
         }
       })
     })
