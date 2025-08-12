@@ -1,0 +1,113 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { supabase } from '@/lib/supabase'
+
+export default function SimpleCheckPage() {
+  const [result, setResult] = useState<string>('')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function simpleCheck() {
+      let output = '🔍 Database Diagnostic Results:\n\n'
+      
+      try {
+        output += '1. Testing basic connection...\n'
+        
+        // Test 1: Simple count
+        try {
+          const { count, error: countError } = await supabase
+            .from('deals')
+            .select('*', { count: 'exact', head: true })
+          
+          if (countError) {
+            output += `❌ Count Error: ${countError.message}\n`
+          } else {
+            output += `✅ Count Success: ${count} rows found\n`
+          }
+        } catch (e) {
+          output += `💥 Count Exception: ${e}\n`
+        }
+        
+        output += '\n2. Testing simple select...\n'
+        
+        // Test 2: Simple select
+        try {
+          const { data, error } = await supabase
+            .from('deals')
+            .select('*')
+            .limit(1)
+          
+          if (error) {
+            output += `❌ Select Error: ${error.message}\n`
+          } else if (data && data.length > 0) {
+            output += `✅ Select Success: Found data\n`
+            output += `Columns: ${Object.keys(data[0]).join(', ')}\n`
+          } else {
+            output += `⚠️ Select Success but no data returned\n`
+          }
+        } catch (e) {
+          output += `💥 Select Exception: ${e}\n`
+        }
+        
+        output += '\n3. Testing table existence...\n'
+        
+        // Test 3: Test different possible column names
+        const commonColumns = ['id', 'nome_oferta', 'emissor', 'deal_uuid', 'nome_fundo']
+        for (const col of commonColumns) {
+          try {
+            const { data, error } = await supabase
+              .from('deals')
+              .select(col)
+              .limit(1)
+            
+            if (!error) {
+              output += `✅ Column '${col}' exists\n`
+            } else {
+              output += `❌ Column '${col}' missing: ${error.message}\n`
+            }
+          } catch (e) {
+            output += `💥 Column '${col}' exception: ${e}\n`
+          }
+        }
+        
+        output += '\n✅ Diagnostic Complete'
+        
+      } catch (e) {
+        output += `💥 Overall Exception: ${e}\n`
+      }
+      
+      setResult(output)
+      setLoading(false)
+    }
+    
+    simpleCheck()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="p-8">
+        <h1 className="text-2xl font-bold mb-4">Simple Database Check</h1>
+        <div className="animate-pulse">Running diagnostics...</div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="p-8">
+      <h1 className="text-2xl font-bold mb-4">Simple Database Check Results</h1>
+      <div className="bg-gray-100 p-4 rounded">
+        <pre className="whitespace-pre-wrap text-sm">{result}</pre>
+      </div>
+      <div className="mt-4 p-4 bg-blue-50 rounded">
+        <h3 className="font-bold">What this tells us:</h3>
+        <ul className="list-disc list-inside text-sm mt-2">
+          <li>If count works: Your table exists and you have permissions</li>
+          <li>If select works: You can read data from the table</li>
+          <li>If columns are found: We can see what fields your table actually has</li>
+          <li>If everything fails: There might be RLS policies blocking access</li>
+        </ul>
+      </div>
+    </div>
+  )
+}

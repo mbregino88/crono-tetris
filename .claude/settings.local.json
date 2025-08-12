@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install)",
+      "Bash(npm run dev:*)",
+      "Bash(curl:*)",
+      "Bash(taskkill:*)",
+      "Bash(rm:*)",
+      "Bash(touch:*)",
+      "Bash(mv:*)",
+      "Bash(npm run lint)",
+      "Bash(grep:*)",
+      "Bash(sed:*)",
+      "Bash(for:*)",
+      "Bash(do sed -i '/console\\.log/d' \"$file\")",
+      "Bash(done)",
+      "Bash(pnpm dev:*)",
+      "Bash(cmd /c:*)",
+      "Bash(next dev:*)",
+      "Bash(pnpm next dev:*)",
+      "Bash(pnpm lint:*)",
+      "Bash(wmic process where processid=26840 get Name,CommandLine:*)",
+      "Bash(npx next dev:*)",
+      "Bash(powershell:*)",
+      "Bash(dir:*)",
+      "Bash(git init:*)",
+      "Bash(git config:*)",
+      "Bash(git add:*)",
+      "Bash(del nul)"
+    ],
+    "deny": []
+  }
+}

@@ -1,0 +1,205 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { supabase } from '@/lib/supabase'
+
+export default function CheckSchemaPage() {
+  const [result, setResult] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function checkExistingSchema() {
+      try {
+        
+        // Try multiple approaches to check the table
+        const { data: deals, error: dealsError } = await supabase
+          .from('deals')
+          .select('*')
+          .limit(3)
+        
+        const { count, error: countError } = await supabase
+          .from('deals')
+          .select('*', { count: 'exact', head: true })
+        
+        const { data: basicTest, error: basicError } = await supabase
+          .from('deals')
+          .select('id, nome_oferta, emissor, setor, veiculo, data_janela')
+          .limit(2)
+        
+        setResult({
+          dealsResult: { data: deals, error: dealsError },
+          countResult: { count, error: countError },
+          basicResult: { data: basicTest, error: basicError }
+        })
+        
+        // Analyze results
+        let columns: string[] = []
+        let actualCount = 0
+        const errorDetails: any = {}
+        
+        if (dealsError) {
+          errorDetails.selectAllError = dealsError.message
+        }
+        if (countError) {
+          errorDetails.countError = countError.message
+        }
+        if (basicError) {
+          errorDetails.basicSelectError = basicError.message
+        }
+        
+        // Try to get columns from any successful query
+        if (deals && deals.length > 0) {
+          columns = Object.keys(deals[0])
+          actualCount = deals.length
+        } else if (basicTest && basicTest.length > 0) {
+          columns = Object.keys(basicTest[0])
+          actualCount = basicTest.length
+        }
+        
+        // Use count if available
+        if (count !== null && count !== undefined) {
+          actualCount = count
+        }
+        
+        // Check specific fields the app expects
+        const expectedFields = [
+          'deal_uuid', 'criado_em', 'status_deal', 'nome_fundo', 'ticker_fundo', 
+          'data_janela', 'setor', 'veiculo', 'produto', 'principal_indexador',
+          'receita_estimada', 'receita_potencial'
+        ]
+        
+        const missingFields = expectedFields.filter(field => !columns.includes(field))
+        const extraFields = columns.filter(col => !expectedFields.includes(col))
+        
+        setResult({
+          dealsCount: actualCount,
+          sampleData: deals || basicTest || [],
+          existingColumns: columns,
+          expectedFields,
+          missingFields,
+          extraFields,
+          hasMatchingSchema: missingFields.length === 0,
+          errorDetails,
+          rawCount: count,
+          diagnostics: {
+            selectAllWorked: !dealsError && deals !== null,
+            countWorked: !countError && count !== null,
+            basicSelectWorked: !basicError && basicTest !== null
+          }
+        })
+        
+      } catch (err) {
+        console.error('💥 Unexpected error:', err)
+        setError(`Unexpected error: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    checkExistingSchema()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="p-8">
+        <h1 className="text-2xl font-bold mb-4">Checking Existing Database Schema...</h1>
+        <div className="animate-pulse text-gray-600">Analyzing your deals table...</div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="p-8 max-w-4xl">
+      <h1 className="text-2xl font-bold mb-4">Database Schema Analysis</h1>
+      
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          <strong>Error:</strong> {error}
+        </div>
+      )}
+      
+      {result && (
+        <div className="space-y-6">
+          <div className="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded">
+            <h2 className="font-bold mb-2">Table Overview:</h2>
+            <p>• Deals found: {result.dealsCount} (raw count: {result.rawCount})</p>
+            <p>• Columns in existing table: {result.existingColumns.length}</p>
+            <p>• Schema matches app expectations: {result.hasMatchingSchema ? '✅ Yes' : '❌ No'}</p>
+            <div className="mt-2 text-sm">
+              <strong>Query Results:</strong>
+              <p>- Select all: {result.diagnostics.selectAllWorked ? '✅' : '❌'}</p>
+              <p>- Count query: {result.diagnostics.countWorked ? '✅' : '❌'}</p>
+              <p>- Basic select: {result.diagnostics.basicSelectWorked ? '✅' : '❌'}</p>
+            </div>
+          </div>
+
+          {Object.keys(result.errorDetails).length > 0 && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+              <h3 className="font-bold mb-2">🔍 Detailed Errors:</h3>
+              <pre className="text-xs overflow-auto bg-white p-2 rounded">
+                {JSON.stringify(result.errorDetails, null, 2)}
+              </pre>
+            </div>
+          )}
+
+          <div className="bg-white border rounded p-4">
+            <h3 className="text-lg font-semibold mb-2">Existing Columns:</h3>
+            <div className="grid grid-cols-3 gap-2">
+              {result.existingColumns.map((col: string) => (
+                <span key={col} className="bg-gray-100 px-2 py-1 rounded text-sm">{col}</span>
+              ))}
+            </div>
+          </div>
+
+          {result.missingFields.length > 0 && (
+            <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
+              <h3 className="font-bold mb-2">❌ Missing Fields (App expects these):</h3>
+              <div className="grid grid-cols-3 gap-2">
+                {result.missingFields.map((field: string) => (
+                  <span key={field} className="bg-yellow-200 px-2 py-1 rounded text-sm font-mono">{field}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {result.extraFields.length > 0 && (
+            <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+              <h3 className="font-bold mb-2">ℹ️ Extra Fields (In your table but not expected by app):</h3>
+              <div className="grid grid-cols-3 gap-2">
+                {result.extraFields.map((field: string) => (
+                  <span key={field} className="bg-green-200 px-2 py-1 rounded text-sm font-mono">{field}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {result.sampleData.length > 0 && (
+            <div className="bg-gray-50 border rounded p-4">
+              <h3 className="text-lg font-semibold mb-2">Sample Data (First Deal):</h3>
+              <pre className="text-xs overflow-auto bg-white p-2 rounded border">
+                {JSON.stringify(result.sampleData[0], null, 2)}
+              </pre>
+            </div>
+          )}
+
+          <div className="bg-blue-50 border border-blue-300 p-4 rounded">
+            <h3 className="font-bold mb-2">🔧 Next Steps:</h3>
+            {result.hasMatchingSchema ? (
+              <p className="text-green-600">✅ Your database schema matches perfectly! The kanban should work.</p>
+            ) : (
+              <div className="text-orange-600">
+                <p>📋 Your existing table needs updates to work with the app:</p>
+                <ol className="list-decimal list-inside mt-2 space-y-1">
+                  <li>Add missing columns using ALTER TABLE statements</li>
+                  <li>Or migrate your data to the new schema structure</li>
+                  <li>Check the database/README.md for the complete schema</li>
+                </ol>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

@@ -1,0 +1,107 @@
+import { useState, useEffect } from 'react'
+import { getCachedAllDealEnumsWithFallback, getEnumValuesWithFallback } from '@/lib/database-enums'
+
+interface UseEnumsReturn {
+  enums: Record<string, string[]>
+  loading: boolean
+  error: string | null
+  refetch: () => Promise<void>
+}
+
+// Hook to load all deal enum values
+export function useEnums(): UseEnumsReturn {
+  const [enums, setEnums] = useState<Record<string, string[]>>({})
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchEnums = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      const enumData = await getCachedAllDealEnumsWithFallback()
+      
+      setEnums(enumData)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error loading enums'
+      console.error('❌ useEnums: Error loading enums:', err)
+      setError(errorMessage)
+      
+      // Even if there's an error, try to set fallback enums
+      try {
+        const { FALLBACK_ENUMS } = await import('@/lib/database-enums')
+        setEnums(FALLBACK_ENUMS)
+      } catch (fallbackError) {
+        console.error('💥 useEnums: Failed to load even fallback enums:', fallbackError)
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchEnums()
+  }, [])
+
+  const refetch = async () => {
+    await fetchEnums()
+  }
+
+  return {
+    enums,
+    loading,
+    error,
+    refetch
+  }
+}
+
+interface UseFieldEnumReturn {
+  values: string[]
+  loading: boolean
+  error: string | null
+  refetch: () => Promise<void>
+}
+
+// Hook to load enum values for a specific field
+export function useFieldEnum(tableName: string, fieldName: string): UseFieldEnumReturn {
+  const [values, setValues] = useState<string[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchFieldEnum = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      const enumValues = await getEnumValuesWithFallback(tableName, fieldName)
+      
+      setValues(enumValues)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : `Unknown error loading ${fieldName} enum`
+      console.error(`❌ useFieldEnum: Error loading ${fieldName} enum:`, err)
+      setError(errorMessage)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchFieldEnum()
+  }, [tableName, fieldName])
+
+  const refetch = async () => {
+    await fetchFieldEnum()
+  }
+
+  return {
+    values,
+    loading,
+    error,
+    refetch
+  }
+}
+
+// Hook for specific deal field enums (convenience wrapper)
+export function useDealEnum(fieldName: string): UseFieldEnumReturn {
+  return useFieldEnum('deals', fieldName)
+}
