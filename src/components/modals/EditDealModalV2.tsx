@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -40,6 +40,8 @@ export function EditDealModalV2({ deal, open, onOpenChange, onSuccess }: EditDea
   const [formattedNumbers, setFormattedNumbers] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [autoSaving, setAutoSaving] = useState(false)
+  const [lastSaved, setLastSaved] = useState<Date | null>(null)
 
   // Initialize form data when deal changes
   useEffect(() => {
@@ -65,6 +67,43 @@ export function EditDealModalV2({ deal, open, onOpenChange, onSuccess }: EditDea
       setFormattedNumbers(formatted)
     }
   }, [deal])
+
+  // Auto-save function with debouncing
+  const autoSave = useCallback(async (updates: Partial<Deal>) => {
+    if (!deal || Object.keys(updates).length === 0) return
+    
+    setAutoSaving(true)
+    try {
+      await updateDeal(deal.deal_uuid, updates)
+      setLastSaved(new Date())
+      // Update the parent component with the changes
+      onSuccess({ ...deal, ...formData, ...updates } as Deal)
+    } catch (err) {
+      console.error('Auto-save failed:', err)
+    } finally {
+      setAutoSaving(false)
+    }
+  }, [deal, formData, onSuccess])
+
+  // Debounced auto-save effect
+  useEffect(() => {
+    if (!deal || !open) return
+    
+    const timer = setTimeout(() => {
+      // Only auto-save if there are actual changes
+      const hasChanges = Object.keys(formData).some(key => {
+        const currentValue = formData[key as keyof Deal]
+        const originalValue = deal[key as keyof Deal]
+        return currentValue !== originalValue
+      })
+      
+      if (hasChanges) {
+        autoSave(formData)
+      }
+    }, 2000) // Auto-save after 2 seconds of inactivity
+    
+    return () => clearTimeout(timer)
+  }, [formData, deal, open, autoSave])
 
   const handleInputChange = (field: keyof Deal, value: string | number | null) => {
     setFormData(prev => ({
@@ -119,7 +158,20 @@ export function EditDealModalV2({ deal, open, onOpenChange, onSuccess }: EditDea
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh]">
         <DialogHeader>
-          <DialogTitle>Editar Deal - {formData.nome_fundo || 'Sem nome'}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            Editar Deal - {formData.nome_fundo || 'Sem nome'}
+            {autoSaving && (
+              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full" />
+                Salvando...
+              </div>
+            )}
+            {lastSaved && !autoSaving && (
+              <div className="text-xs text-green-600">
+                Salvo {lastSaved.toLocaleTimeString()}
+              </div>
+            )}
+          </DialogTitle>
         </DialogHeader>
         
         <ScrollArea className="h-[calc(90vh-120px)] pr-4">
