@@ -74,10 +74,12 @@ export function EditDealModalV2({ deal, open, onOpenChange, onSuccess }: EditDea
     
     setAutoSaving(true)
     try {
-      await updateDeal(deal.deal_uuid, updates)
-      setLastSaved(new Date())
-      // Update the parent component with the changes
-      onSuccess({ ...deal, ...formData, ...updates } as Deal)
+      const result = await updateDeal(deal.deal_uuid, updates)
+      if (result) {
+        setLastSaved(new Date())
+        // Update the parent component with the changes
+        onSuccess({ ...deal, ...formData, ...updates } as Deal)
+      }
     } catch (err) {
       console.error('Auto-save failed:', err)
     } finally {
@@ -85,20 +87,48 @@ export function EditDealModalV2({ deal, open, onOpenChange, onSuccess }: EditDea
     }
   }, [deal, formData, onSuccess])
 
+  // Helper function to detect if a field has changed
+  const isFieldChanged = (currentValue: unknown, originalValue: unknown): boolean => {
+    if (typeof currentValue === 'number' && (typeof originalValue === 'number' || originalValue === null)) {
+      // For number fields, compare with tolerance for floating point precision
+      const current = currentValue || 0
+      const original = originalValue || 0
+      return Math.abs(current - original) > 0.001
+    } else if (currentValue === null && originalValue === null) {
+      // Both null, no change
+      return false
+    } else if (currentValue === '' && originalValue === null) {
+      // Empty string equivalent to null for optional fields
+      return false
+    } else if (currentValue === null && originalValue === '') {
+      // Null equivalent to empty string for optional fields
+      return false
+    } else {
+      // Standard comparison for other types
+      return currentValue !== originalValue
+    }
+  }
+
   // Debounced auto-save effect
   useEffect(() => {
     if (!deal || !open) return
     
     const timer = setTimeout(() => {
-      // Only auto-save if there are actual changes
-      const hasChanges = Object.keys(formData).some(key => {
-        const currentValue = formData[key as keyof Deal]
-        const originalValue = deal[key as keyof Deal]
-        return currentValue !== originalValue
+      // Find changed fields and create updates object
+      const updates: Partial<Deal> = {}
+      
+      Object.keys(formData).forEach(key => {
+        const fieldKey = key as keyof Deal
+        const currentValue = formData[fieldKey]
+        const originalValue = deal[fieldKey]
+        
+        if (isFieldChanged(currentValue, originalValue)) {
+          ;(updates as Record<string, unknown>)[key] = currentValue
+        }
       })
       
-      if (hasChanges) {
-        autoSave(formData)
+      if (Object.keys(updates).length > 0) {
+        autoSave(updates)
       }
     }, 2000) // Auto-save after 2 seconds of inactivity
     
