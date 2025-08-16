@@ -74,6 +74,7 @@ export function KanbanBoard() {
   const [showAddDealDialog, setShowAddDealDialog] = useState(false)
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null)
   const [showDealModal, setShowDealModal] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   // Refs for scroll synchronization
   const headersContainerRef = React.useRef<HTMLDivElement>(null)
@@ -99,43 +100,51 @@ export function KanbanBoard() {
     setMounted(true)
   }, [])
 
-  // Apply standard view settings for first-time users
+  // Apply standard view settings immediately on mount
   useEffect(() => {
-    if (!preferencesLoaded || !mounted) return
+    if (!mounted) return
     
-    if (shouldApplyStandardView()) {
-      const defaults = getStandardViewDefaults()
-      
-      // Apply default settings
-      if (defaults.zoomLevel) setZoomLevel(defaults.zoomLevel)
-      if (defaults.wideColumns !== undefined) setWideColumns(defaults.wideColumns)
-      if (defaults.sectionsCollapsed?.filters !== undefined) {
-        setFiltersCollapsed(defaults.sectionsCollapsed.filters)
-      }
-      
-      // Apply default date filter
-      if (defaults.defaultDateFilter) {
-        setFilters(prev => ({
-          ...prev,
-          dataJanela: defaults.defaultDateFilter!
-        }))
-      }
-      
-      // Mark as applied and save preferences
-      markStandardViewApplied()
-      updatePreferences(defaults)
-      
-      console.log('✅ Applied standard view for first-time user')
-    } else {
-      // Load existing preferences for returning users
-      const currentPrefs = loadUserPreferences()
-      if (currentPrefs.zoomLevel !== 1.0) setZoomLevel(currentPrefs.zoomLevel)
-      if (currentPrefs.wideColumns) setWideColumns(currentPrefs.wideColumns)
-      if (currentPrefs.sectionsCollapsed?.filters !== undefined) {
-        setFiltersCollapsed(currentPrefs.sectionsCollapsed.filters)
+    // Check and apply standard view without waiting for preferencesLoaded
+    const checkAndApplyStandardView = () => {
+      if (shouldApplyStandardView()) {
+        const defaults = getStandardViewDefaults()
+        
+        // Apply default settings immediately
+        if (defaults.zoomLevel) setZoomLevel(defaults.zoomLevel)
+        if (defaults.wideColumns !== undefined) setWideColumns(defaults.wideColumns)
+        if (defaults.sectionsCollapsed?.filters !== undefined) {
+          setFiltersCollapsed(defaults.sectionsCollapsed.filters)
+        }
+        
+        // Apply default date filter
+        if (defaults.defaultDateFilter) {
+          setFilters(prev => ({
+            ...prev,
+            dataJanela: defaults.defaultDateFilter!
+          }))
+        }
+        
+        // Mark as applied and save preferences
+        markStandardViewApplied()
+        if (preferencesLoaded) {
+          updatePreferences(defaults)
+        }
+        
+        console.log('✅ Applied standard view for first-time user')
+      } else {
+        // Load existing preferences for returning users
+        const currentPrefs = loadUserPreferences()
+        if (currentPrefs.zoomLevel !== 1.0) setZoomLevel(currentPrefs.zoomLevel)
+        if (currentPrefs.wideColumns) setWideColumns(currentPrefs.wideColumns)
+        if (currentPrefs.sectionsCollapsed?.filters !== undefined) {
+          setFiltersCollapsed(currentPrefs.sectionsCollapsed.filters)
+        }
       }
     }
-  }, [preferencesLoaded, mounted, updatePreferences])
+    
+    // Apply immediately
+    checkAndApplyStandardView()
+  }, [mounted, preferencesLoaded, updatePreferences])
 
   // Load deals
   useEffect(() => {
@@ -209,8 +218,8 @@ export function KanbanBoard() {
     }
   }, [mounted])
 
-  const loadDeals = async () => {
-    setLoading(true)
+  const loadDeals = async (showLoadingState = true) => {
+    if (showLoadingState) setLoading(true)
     setError(null)
     try {
       const data = await fetchDeals()
@@ -224,8 +233,15 @@ export function KanbanBoard() {
       setError(`Failed to load deals: ${error instanceof Error ? error.message : 'Unknown error'}`)
       setDeals([])
     } finally {
-      setLoading(false)
+      if (showLoadingState) setLoading(false)
     }
+  }
+
+  // Refresh function for manual sync
+  const handleRefresh = async () => {
+    setIsRefreshing(true)
+    await loadDeals(false) // Don't show full loading state
+    setIsRefreshing(false)
   }
 
   // Helper functions for robust backlog detection
@@ -499,6 +515,34 @@ export function KanbanBoard() {
         // Assign next available backlog order
         const maxBacklogOrder = Math.max(...backlogDeals.map(d => d.backlog_order || 0), 0)
         updates.backlog_order = maxBacklogOrder + 1
+      } else if (overData?.type === 'cell') {
+        // Cell drop with metadata - use the provided row and column keys
+        const newRowKey = overData.rowKey
+        const newColKey = overData.colKey
+        
+        if (!newRowKey || !newColKey) return
+
+        // If dragging from backlog to a cell, auto-assign the row's grouping value
+        const isFromBacklog = !activeDeal.data_janela
+        if (isFromBacklog) {
+          // Update the grouping field to match the target row
+          updates[groupBy] = newRowKey === 'Outros' ? null : newRowKey
+        }
+
+        // Update the date (month) - use last day of month
+        const newDateString = parseMonthYearToDate(newColKey, true)
+        if (newDateString) {
+          updates.data_janela = newDateString
+          
+          // Clear backlog_order when moving from backlog
+          if (isFromBacklog) {
+            updates.backlog_order = null
+          }
+        } else {
+          console.error('❌ Failed to parse target month from cell:', newColKey)
+          return
+        }
+        
       } else if (overData?.type === 'column') {
         // Column drop - change the month only
         const targetMonth = overData.monthKey
@@ -517,7 +561,7 @@ export function KanbanBoard() {
           return
         }
         
-      } else if (overId.includes('-')) {
+      } else if (overId.includes('-') && !overData) {
         // Cell drop - change month and potentially row group
         
         // Fix: Split properly to preserve full month-year format
@@ -645,7 +689,7 @@ export function KanbanBoard() {
             Check the browser console for more details.
           </div>
           <button 
-            onClick={loadDeals}
+            onClick={() => loadDeals()}
             className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
           >
             Retry Connection
@@ -695,6 +739,8 @@ export function KanbanBoard() {
           hasFilters={Object.values(filters).some(f => f.length > 0)}
           onSettingsClick={handleSettingsClick}
           onLogoutClick={handleLogoutClick}
+          onRefresh={handleRefresh}
+          isRefreshing={isRefreshing}
         />
       )}
 
@@ -779,15 +825,13 @@ export function KanbanBoard() {
       />
 
       {/* Legend for cell totals */}
-      <div className="px-1 py-1 bg-background">
-        <div className="text-xs bg-muted/20 rounded px-2 py-1 mx-auto w-fit border border-muted/30">
-          <div className="flex items-center gap-1 opacity-75">
-            <span className="text-muted-foreground"># Deals</span>
-            <span className="text-gray-400">|</span>
-            <span className="text-green-600 font-medium">Oferta Base</span>
-            <span className="text-gray-400">|</span>
-            <span className="text-purple-600 font-medium">Receita Potencial</span>
-          </div>
+      <div className="px-4 py-1 bg-background">
+        <div className="text-[10px] inline-flex items-center gap-1 opacity-60">
+          <span className="text-muted-foreground"># Deals</span>
+          <span className="text-gray-400">|</span>
+          <span className="text-green-600">Oferta Base</span>
+          <span className="text-gray-400">|</span>
+          <span className="text-purple-600">Receita Potencial</span>
         </div>
       </div>
 

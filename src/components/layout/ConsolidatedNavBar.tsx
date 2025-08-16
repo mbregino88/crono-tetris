@@ -4,7 +4,7 @@ import { SearchBar } from '@/components/search/SearchBar'
 import { ZoomControls } from '@/components/controls/ZoomControls'
 import { ViewModeToggle } from '@/components/controls/ViewModeToggle'
 import { UserAvatar } from '@/components/ui/user-avatar'
-import { Plus, ArrowUpDown, Calendar, Expand } from 'lucide-react'
+import { Plus, ArrowUpDown, Calendar, Expand, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import type { GroupingField } from '@/lib/types'
@@ -41,6 +41,10 @@ interface ConsolidatedNavBarProps {
   // User avatar props
   onSettingsClick?: () => void
   onLogoutClick?: () => void
+  
+  // Refresh
+  onRefresh?: () => void
+  isRefreshing?: boolean
 }
 
 export function ConsolidatedNavBar({
@@ -63,7 +67,9 @@ export function ConsolidatedNavBar({
   totalCount,
   hasFilters,
   onSettingsClick,
-  onLogoutClick
+  onLogoutClick,
+  onRefresh,
+  isRefreshing
 }: ConsolidatedNavBarProps) {
   return (
     <div className="border-b bg-[#1F2F44] shadow-sm w-full">
@@ -116,6 +122,18 @@ export function ConsolidatedNavBar({
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Refresh Button */}
+            <Button
+              onClick={onRefresh}
+              disabled={isRefreshing}
+              variant="outline"
+              size="sm"
+              className="h-8 px-3 flex items-center gap-1 border-gray-500 text-gray-500 hover:bg-gray-500/20"
+              title="Atualizar dados do banco"
+            >
+              <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+            </Button>
 
             {/* Transpose Toggle */}
             <Button

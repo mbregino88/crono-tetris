@@ -27,9 +27,9 @@ export function BacklogStrip({ deals, searchTerm, className, onDealClick }: Back
 
   return (
     <div className={cn("bg-background border-b shadow-sm w-full", className)}>
-      <div className="px-4 py-4">
+      <div className={cn("px-4", isCollapsed ? "py-1.5" : "py-4")}>
         {/* Backlog Header */}
-        <div className="flex items-center justify-between mb-3">
+        <div className={cn("flex items-center justify-between", !isCollapsed && "mb-3")}>
           <div className="flex items-center gap-3">
             <h3 className="text-sm font-medium text-foreground">Backlog</h3>
             <div className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -49,12 +49,12 @@ export function BacklogStrip({ deals, searchTerm, className, onDealClick }: Back
             onClick={() => setIsCollapsed(!isCollapsed)}
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0"
+            className="h-6 w-6 p-0"
           >
             {isCollapsed ? (
-              <ChevronDown className="h-4 w-4" />
+              <ChevronDown className="h-3 w-3" />
             ) : (
-              <ChevronUp className="h-4 w-4" />
+              <ChevronUp className="h-3 w-3" />
             )}
           </Button>
         </div>

@@ -32,7 +32,18 @@ interface DroppableCellProps {
 }
 
 function DroppableCell({ id, children, className }: DroppableCellProps) {
-  const { isOver, setNodeRef } = useDroppable({ id })
+  // Extract row and column keys from the cell ID for metadata
+  const [rowKey, ...colKeyParts] = id.split('-')
+  const colKey = colKeyParts.join('-') // Rejoin in case column key contains dashes
+  
+  const { isOver, setNodeRef } = useDroppable({ 
+    id,
+    data: {
+      type: 'cell',
+      rowKey,
+      colKey
+    }
+  })
 
   return (
     <div

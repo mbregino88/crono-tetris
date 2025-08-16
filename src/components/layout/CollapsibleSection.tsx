@@ -40,18 +40,18 @@ export function CollapsibleSection({
 
   return (
     <div className={cn("border-b bg-background", className)}>
-      <div className="px-4 py-2 flex items-center justify-between">
+      <div className="px-4 py-1.5 flex items-center justify-between">
         <h3 className="text-sm font-medium text-gray-900">{title}</h3>
         <Button
           variant="ghost"
           size="sm"
           onClick={handleToggle}
-          className="h-8 w-8 p-0"
+          className="h-6 w-6 p-0"
         >
           {isCollapsed ? (
-            <ChevronDown className="h-4 w-4" />
+            <ChevronDown className="h-3 w-3" />
           ) : (
-            <ChevronUp className="h-4 w-4" />
+            <ChevronUp className="h-3 w-3" />
           )}
         </Button>
       </div>
