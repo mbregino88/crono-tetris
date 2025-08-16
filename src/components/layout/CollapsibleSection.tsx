@@ -10,15 +10,33 @@ interface CollapsibleSectionProps {
   children: React.ReactNode
   defaultCollapsed?: boolean
   className?: string
+  // External state control
+  isCollapsed?: boolean
+  onCollapsedChange?: (collapsed: boolean) => void
 }
 
 export function CollapsibleSection({ 
   title, 
   children, 
   defaultCollapsed = false,
-  className 
+  className,
+  isCollapsed: externalIsCollapsed,
+  onCollapsedChange
 }: CollapsibleSectionProps) {
-  const [isCollapsed, setIsCollapsed] = React.useState(defaultCollapsed)
+  const [internalIsCollapsed, setInternalIsCollapsed] = React.useState(defaultCollapsed)
+  
+  // Use external state if provided, otherwise use internal state
+  const isCollapsed = externalIsCollapsed !== undefined ? externalIsCollapsed : internalIsCollapsed
+  
+  const handleToggle = () => {
+    const newCollapsed = !isCollapsed
+    
+    if (onCollapsedChange) {
+      onCollapsedChange(newCollapsed)
+    } else {
+      setInternalIsCollapsed(newCollapsed)
+    }
+  }
 
   return (
     <div className={cn("border-b bg-background", className)}>
@@ -27,7 +45,7 @@ export function CollapsibleSection({
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => setIsCollapsed(!isCollapsed)}
+          onClick={handleToggle}
           className="h-8 w-8 p-0"
         >
           {isCollapsed ? (

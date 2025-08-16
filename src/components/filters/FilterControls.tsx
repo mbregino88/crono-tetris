@@ -21,9 +21,10 @@ interface FilterControlsProps {
   deals: Deal[]
   filters: FilterState
   onFiltersChange: (filters: FilterState) => void
+  onApplyDefaultDateFilter?: () => void
 }
 
-export function FilterControls({ deals, filters, onFiltersChange }: FilterControlsProps) {
+export function FilterControls({ deals, filters, onFiltersChange, onApplyDefaultDateFilter }: FilterControlsProps) {
   // Extract unique values from deals for each filter
   const getUniqueValues = (field: keyof Deal) => {
     const values = deals
@@ -78,6 +79,12 @@ export function FilterControls({ deals, filters, onFiltersChange }: FilterContro
       setor: [],
       tipoCota: []
     })
+  }
+
+  const applyDefaultDateFilter = () => {
+    if (onApplyDefaultDateFilter) {
+      onApplyDefaultDateFilter()
+    }
   }
 
   const getTotalActiveFilters = () => {
@@ -161,16 +168,28 @@ export function FilterControls({ deals, filters, onFiltersChange }: FilterContro
             )}
           </div>
           
-          {getTotalActiveFilters() > 0 && (
-            <Button
-              onClick={clearAllFilters}
-              variant="outline"
-              size="sm"
-              className="text-xs h-6"
-            >
-              Limpar todos
-            </Button>
-          )}
+          <div className="flex gap-2">
+            {onApplyDefaultDateFilter && (
+              <Button
+                onClick={applyDefaultDateFilter}
+                variant="outline"
+                size="sm"
+                className="text-xs h-6"
+              >
+                Vista Padrão
+              </Button>
+            )}
+            {getTotalActiveFilters() > 0 && (
+              <Button
+                onClick={clearAllFilters}
+                variant="outline"
+                size="sm"
+                className="text-xs h-6"
+              >
+                Limpar todos
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Filter Dropdowns - Multiselect with Ctrl+click */}

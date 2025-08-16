@@ -23,6 +23,14 @@ import { fetchDeals, updateDeal, updateBacklogOrder } from '@/lib/supabase'
 import { logObjectChanges } from '@/lib/audit'
 import { searchAndFilterDeals } from '@/lib/search'
 import { FilterControls, type FilterState } from '@/components/filters/FilterControls'
+import { 
+  shouldApplyStandardView, 
+  markStandardViewApplied, 
+  getStandardViewDefaults,
+  generateDefaultDateFilter,
+  loadUserPreferences,
+  useUserPreferences
+} from '@/lib/user-preferences'
 import { BacklogStrip } from '@/components/backlog/BacklogStrip'
 import { ConsolidatedNavBar } from '@/components/layout/ConsolidatedNavBar'
 import { CollapsibleSection } from '@/components/layout/CollapsibleSection'
@@ -61,6 +69,8 @@ export function KanbanBoard() {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [isTransposed, setIsTransposed] = useState(false)
   const [wideColumns, setWideColumns] = useState(false)
+  const [filtersCollapsed, setFiltersCollapsed] = useState(false)
+  const { preferences, updatePreferences, mounted: preferencesLoaded } = useUserPreferences()
   const [showAddDealDialog, setShowAddDealDialog] = useState(false)
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null)
   const [showDealModal, setShowDealModal] = useState(false)
@@ -89,12 +99,47 @@ export function KanbanBoard() {
     setMounted(true)
   }, [])
 
-  // Load deals - removed auto-date filter to allow NULL data_janela deals in backlog
+  // Apply standard view settings for first-time users
+  useEffect(() => {
+    if (!preferencesLoaded || !mounted) return
+    
+    if (shouldApplyStandardView()) {
+      const defaults = getStandardViewDefaults()
+      
+      // Apply default settings
+      if (defaults.zoomLevel) setZoomLevel(defaults.zoomLevel)
+      if (defaults.wideColumns !== undefined) setWideColumns(defaults.wideColumns)
+      if (defaults.sectionsCollapsed?.filters !== undefined) {
+        setFiltersCollapsed(defaults.sectionsCollapsed.filters)
+      }
+      
+      // Apply default date filter
+      if (defaults.defaultDateFilter) {
+        setFilters(prev => ({
+          ...prev,
+          dataJanela: defaults.defaultDateFilter!
+        }))
+      }
+      
+      // Mark as applied and save preferences
+      markStandardViewApplied()
+      updatePreferences(defaults)
+      
+      console.log('✅ Applied standard view for first-time user')
+    } else {
+      // Load existing preferences for returning users
+      const currentPrefs = loadUserPreferences()
+      if (currentPrefs.zoomLevel !== 1.0) setZoomLevel(currentPrefs.zoomLevel)
+      if (currentPrefs.wideColumns) setWideColumns(currentPrefs.wideColumns)
+      if (currentPrefs.sectionsCollapsed?.filters !== undefined) {
+        setFiltersCollapsed(currentPrefs.sectionsCollapsed.filters)
+      }
+    }
+  }, [preferencesLoaded, mounted, updatePreferences])
+
+  // Load deals
   useEffect(() => {
     loadDeals()
-    
-    // REMOVED: Auto-apply date filter that was filtering out NULL data_janela deals
-    // Now all deals (including NULL data_janela) will be shown by default
   }, [])
 
   // Enhanced scroll synchronization with throttling
@@ -620,15 +665,30 @@ export function KanbanBoard() {
           groupBy={groupBy}
           onGroupByChange={setGroupBy}
           zoomLevel={zoomLevel}
-          onZoomIn={() => setZoomLevel(prev => Math.min(prev + 0.1, 1.5))}
-          onZoomOut={() => setZoomLevel(prev => Math.max(prev - 0.1, 0.5))}
-          onZoomReset={() => setZoomLevel(1)}
+          onZoomIn={() => {
+            const newLevel = Math.min(zoomLevel + 0.1, 1.5)
+            setZoomLevel(newLevel)
+            updatePreferences({ zoomLevel: newLevel })
+          }}
+          onZoomOut={() => {
+            const newLevel = Math.max(zoomLevel - 0.1, 0.5)
+            setZoomLevel(newLevel)
+            updatePreferences({ zoomLevel: newLevel })
+          }}
+          onZoomReset={() => {
+            setZoomLevel(1)
+            updatePreferences({ zoomLevel: 1 })
+          }}
           isFullscreen={isFullscreen}
           onFullscreenToggle={() => setIsFullscreen(!isFullscreen)}
           isTransposed={isTransposed}
           onTransposeToggle={() => setIsTransposed(!isTransposed)}
           wideColumns={wideColumns}
-          onWideColumnsToggle={() => setWideColumns(!wideColumns)}
+          onWideColumnsToggle={() => {
+            const newWideColumns = !wideColumns
+            setWideColumns(newWideColumns)
+            updatePreferences({ wideColumns: newWideColumns })
+          }}
           onAddDeal={() => setShowAddDealDialog(true)}
           filteredCount={filteredDeals.length}
           totalCount={deals.length}
@@ -640,11 +700,30 @@ export function KanbanBoard() {
 
       {/* Filter Controls - Collapsible */}
       {!isFullscreen && (
-        <CollapsibleSection title="Filtros">
+        <CollapsibleSection 
+          title="Filtros"
+          isCollapsed={filtersCollapsed}
+          onCollapsedChange={(collapsed) => {
+            setFiltersCollapsed(collapsed)
+            updatePreferences({ 
+              sectionsCollapsed: { 
+                ...preferences.sectionsCollapsed,
+                filters: collapsed 
+              }
+            })
+          }}
+        >
           <FilterControls
             deals={deals}
             filters={filters}
             onFiltersChange={setFilters}
+            onApplyDefaultDateFilter={() => {
+              const defaultFilter = generateDefaultDateFilter()
+              setFilters(prev => ({
+                ...prev,
+                dataJanela: defaultFilter
+              }))
+            }}
           />
         </CollapsibleSection>
       )}
@@ -656,9 +735,20 @@ export function KanbanBoard() {
           <div className="flex items-center gap-2">
             <ZoomControls
               zoomLevel={zoomLevel}
-              onZoomIn={() => setZoomLevel(prev => Math.min(prev + 0.1, 1.5))}
-              onZoomOut={() => setZoomLevel(prev => Math.max(prev - 0.1, 0.5))}
-              onZoomReset={() => setZoomLevel(1)}
+              onZoomIn={() => {
+                const newLevel = Math.min(zoomLevel + 0.1, 1.5)
+                setZoomLevel(newLevel)
+                updatePreferences({ zoomLevel: newLevel })
+              }}
+              onZoomOut={() => {
+                const newLevel = Math.max(zoomLevel - 0.1, 0.5)
+                setZoomLevel(newLevel)
+                updatePreferences({ zoomLevel: newLevel })
+              }}
+              onZoomReset={() => {
+                setZoomLevel(1)
+                updatePreferences({ zoomLevel: 1 })
+              }}
             />
             <Button
               onClick={() => setShowAddDealDialog(true)}
